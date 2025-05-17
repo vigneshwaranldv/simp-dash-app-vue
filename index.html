@@ -21,7 +21,7 @@
   <div id="app"></div>
 
   <script type="module">
-    const { createApp, ref, onMounted, computed } = Vue;
+    const { createApp, ref, onMounted, computed, nextTick } = Vue;
     const { createVuetify } = Vuetify;
     const vuetify = createVuetify();
 
@@ -73,6 +73,8 @@
               response = await fetch(section.api);
             }
             section._data = await response.json();
+            await nextTick();
+            renderChart(section);
           } catch (err) {
             section._data = [];
             console.error('API fetch failed:', err);
@@ -81,9 +83,46 @@
           }
         }
 
+        function renderChart(section) {
+          if (section.type === 'chart' && section._data) {
+            const prefix = section.useTab ? 'tab' : 'inline';
+            const idx = sections.value.indexOf(section);
+            const chartId = `chart-${prefix}-${idx}`;
+            const ctx = document.getElementById(chartId);
+            if (ctx && !ctx.dataset.rendered) {
+              new Chart(ctx, {
+                type: section.chartType || 'bar',
+                data: {
+                  labels: section._data.map(item => item.label || item.title || item.id),
+                  datasets: [{
+                    label: section.chartLabel || 'Dataset',
+                    data: section._data.map(item => item.value || item.id),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false
+                }
+              });
+              ctx.dataset.rendered = true;
+            }
+          }
+        }
+
         onMounted(loadConfig);
 
-        return { sections, inlineSections, tabbedSections, fetchData, userInput, loading, error, activeTab };
+        return {
+          sections,
+          inlineSections,
+          tabbedSections,
+          fetchData,
+          userInput,
+          loading,
+          error,
+          activeTab,
+          renderChart
+        };
       },
       template: `
         <v-app>
@@ -199,38 +238,7 @@
             </div>
           </v-container>
         </v-app>
-      `,
-      updated() {
-        const renderCharts = (sectionList, prefix) => {
-          sectionList.forEach((section, idx) => {
-            if (section.type === 'chart' && section._data) {
-              const chartId = `chart-${prefix}-${idx}`;
-              const ctx = document.getElementById(chartId);
-              if (ctx && !ctx.dataset.rendered) {
-                new Chart(ctx, {
-                  type: section.chartType || 'bar',
-                  data: {
-                    labels: section._data.map(item => item.label || item.title || item.id),
-                    datasets: [{
-                      label: section.chartLabel || 'Dataset',
-                      data: section._data.map(item => item.value || item.id),
-                      backgroundColor: 'rgba(54, 162, 235, 0.5)'
-                    }]
-                  },
-                  options: {
-                    responsive: true,
-                    maintainAspectRatio: false
-                  }
-                });
-                ctx.dataset.rendered = true;
-              }
-            }
-          });
-        };
-
-        renderCharts(this.inlineSections, 'inline');
-        renderCharts(this.tabbedSections, 'tab');
-      }
+      `
     });
 
     app.use(vuetify).mount('#app');

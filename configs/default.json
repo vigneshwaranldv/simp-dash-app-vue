@@ -1,0 +1,22 @@
+{
+    "sections": [
+      {
+        "title": "Product Inventory",
+        "type": "table",
+        "api":"https://jsonplaceholder.typicode.com/posts",
+        "apiType":"GET"
+      },
+      {
+        "title": "Batch Success Rate",
+        "type": "chart",
+        "api": "https://jsonplaceholder.typicode.com/posts",
+        "apiType":"POST",
+        "chartType": "bar",
+        "chartLabel": "Success %",
+        "payload": {},
+        "allowInput": true,
+        "inputLabel": "Batch Group"
+      }
+    ]
+  }
+  

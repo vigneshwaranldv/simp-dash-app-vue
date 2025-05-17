@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Config-Driven Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Vue 3 + Vuetify CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: Roboto, sans-serif; margin: 0; padding: 0; }
+    .dashboard-section { margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script type="module">
+    const { createApp, ref, onMounted } = Vue;
+    const { createVuetify } = Vuetify;
+    const vuetify = createVuetify();
+
+    const app = createApp({
+      setup() {
+        const sections = ref([]);
+        const userInput = ref("");
+        const loading = ref(false);
+        const error = ref(null);
+
+        async function loadConfig() {
+          const urlParams = new URLSearchParams(window.location.search);
+          const configName = urlParams.get("page") || "default";
+          const configPath = `./configs/${configName}.json`;
+
+          try {
+            const res = await fetch(configPath);
+            const config = await res.json();
+            sections.value = config.sections || [];
+
+            // auto-fetch data for non-input sections
+            for (const section of sections.value) {
+              if (!section.allowInput) {
+                await fetchData(section);
+              }
+            }
+          } catch (err) {
+            error.value = `Failed to load config: ${err.message}`;
+          }
+        }
+
+        async function fetchData(section, input) {
+          loading.value = true;
+          const payload = section.payload || {};
+          if (input) payload.input = input;
+
+          try {
+            let response;
+            if (section.apiType === "POST") {
+              response = await fetch(section.api, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+            } else {
+              response = await fetch(section.api);
+            }
+            section._data = await response.json();
+          } catch (err) {
+            section._data = [];
+            console.error('API fetch failed:', err);
+          } finally {
+            loading.value = false;
+          }
+        }
+
+        onMounted(loadConfig);
+
+        return { sections, fetchData, userInput, loading, error };
+      },
+      template: `
+        <v-app>
+          <v-container>
+            <v-alert type="error" v-if="error">{{ error }}</v-alert>
+            <v-progress-linear v-if="loading" indeterminate color="primary"></v-progress-linear>
+
+            <template v-for="(section, idx) in sections" :key="idx">
+              <div class="dashboard-section">
+                <h3>{{ section.title }}</h3>
+
+                <div v-if="section.allowInput">
+                  <v-text-field v-model="userInput" :label="section.inputLabel || 'Enter Value'"></v-text-field>
+                  <v-btn @click="section._data = null" color="secondary">Clear</v-btn>
+                  <v-btn @click="fetchData(section, userInput)" color="primary">Submit</v-btn>
+                </div>
+
+                <v-data-table
+                  v-if="section.type === 'table' && section._data"
+                  :headers="section.headers || Object.keys(section._data[0] || {}).map(k => ({ title: k, key: k }))"
+                  :items="section._data"
+                  class="elevation-1 mt-4"
+                />
+
+                <canvas
+                  v-if="section.type === 'chart' && section._data"
+                  :id="'chart-' + idx"
+                  width="400" height="200"
+                  class="mt-4"
+                ></canvas>
+              </div>
+            </template>
+          </v-container>
+        </v-app>
+      `,
+      updated() {
+        // Handle chart rendering
+        this.sections.forEach((section, idx) => {
+          if (section.type === 'chart' && section._data) {
+            const ctx = document.getElementById('chart-' + idx);
+            if (ctx && !ctx.dataset.rendered) {
+              new Chart(ctx, {
+                type: section.chartType || 'bar',
+                data: {
+                  labels: section._data.map(item => item.label || item.title || item.id),
+                  datasets: [{
+                    label: section.chartLabel || 'Dataset',
+                    data: section._data.map(item => item.value || item.id),
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)'
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false
+                }
+              });
+              ctx.dataset.rendered = true;
+            }
+          }
+        });
+      }
+    });
+
+    app.use(vuetify).mount('#app');
+  </script>
+</body>
+</html>

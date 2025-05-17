@@ -91,45 +91,48 @@
             <v-alert type="error" v-if="error">{{ error }}</v-alert>
             <v-progress-linear v-if="loading" indeterminate color="primary"></v-progress-linear>
 
-            <div v-for="(section, idx) in inlineSections" :key="'inline-' + idx" class="dashboard-section">
-              <h3>{{ section.title }}</h3>
-
-              <div v-if="section.allowInput">
-                <v-text-field v-model="userInput" :label="section.inputLabel || 'Enter Value'"></v-text-field>
-                <v-btn @click="section._data = null" color="secondary">Clear</v-btn>
-                <v-btn @click="fetchData(section, userInput)" color="primary">Submit</v-btn>
-              </div>
-
-              <v-card v-if="section.type === 'card' && section._data" class="pa-4 my-4">
-                <div v-for="(value, key) in section._data" :key="key">
-                  <strong>{{ key }}:</strong> {{ value }}
-                </div>
-              </v-card>
-
-              <v-data-table
-                v-if="section.type === 'table' && section._data"
-                :headers="section.headers || Object.keys(section._data[0] || {}).map(k => ({ title: k, key: k }))"
-                :items="section._data"
-                class="elevation-1 mt-4"
-              />
-
-              <canvas
-                v-if="section.type === 'chart' && section._data"
-                :id="'chart-inline-' + idx"
-                width="400" height="200"
-                class="mt-4"
-              ></canvas>
-            </div>
-
             <div v-if="tabbedSections.length">
               <v-tabs v-model="activeTab" class="my-4">
+                <v-tab>Default</v-tab>
                 <v-tab v-for="(section, idx) in tabbedSections" :key="'tab-' + idx">
                   {{ section.title }}
                 </v-tab>
               </v-tabs>
 
               <v-window v-model="activeTab">
-                <v-window-item v-for="(section, idx) in tabbedSections" :key="'tab-view-' + idx" :value="idx">
+                <v-window-item :value="0">
+                  <div v-for="(section, idx) in inlineSections" :key="'inline-' + idx" class="dashboard-section">
+                    <h3>{{ section.title }}</h3>
+
+                    <div v-if="section.allowInput">
+                      <v-text-field v-model="userInput" :label="section.inputLabel || 'Enter Value'"></v-text-field>
+                      <v-btn @click="section._data = null" color="secondary">Clear</v-btn>
+                      <v-btn @click="fetchData(section, userInput)" color="primary">Submit</v-btn>
+                    </div>
+
+                    <v-card v-if="section.type === 'card' && section._data" class="pa-4 my-4">
+                      <div v-for="(value, key) in section._data" :key="key">
+                        <strong>{{ key }}:</strong> {{ value }}
+                      </div>
+                    </v-card>
+
+                    <v-data-table
+                      v-if="section.type === 'table' && section._data"
+                      :headers="section.headers || Object.keys(section._data[0] || {}).map(k => ({ title: k, key: k }))"
+                      :items="section._data"
+                      class="elevation-1 mt-4"
+                    />
+
+                    <canvas
+                      v-if="section.type === 'chart' && section._data"
+                      :id="'chart-inline-' + idx"
+                      width="400" height="200"
+                      class="mt-4"
+                    ></canvas>
+                  </div>
+                </v-window-item>
+
+                <v-window-item v-for="(section, idx) in tabbedSections" :key="'tab-view-' + idx" :value="idx + 1">
                   <div class="dashboard-section">
                     <h3>{{ section.title }}</h3>
 
@@ -161,6 +164,38 @@
                   </div>
                 </v-window-item>
               </v-window>
+            </div>
+
+            <div v-else>
+              <div v-for="(section, idx) in inlineSections" :key="'inline-' + idx" class="dashboard-section">
+                <h3>{{ section.title }}</h3>
+
+                <div v-if="section.allowInput">
+                  <v-text-field v-model="userInput" :label="section.inputLabel || 'Enter Value'"></v-text-field>
+                  <v-btn @click="section._data = null" color="secondary">Clear</v-btn>
+                  <v-btn @click="fetchData(section, userInput)" color="primary">Submit</v-btn>
+                </div>
+
+                <v-card v-if="section.type === 'card' && section._data" class="pa-4 my-4">
+                  <div v-for="(value, key) in section._data" :key="key">
+                    <strong>{{ key }}:</strong> {{ value }}
+                  </div>
+                </v-card>
+
+                <v-data-table
+                  v-if="section.type === 'table' && section._data"
+                  :headers="section.headers || Object.keys(section._data[0] || {}).map(k => ({ title: k, key: k }))"
+                  :items="section._data"
+                  class="elevation-1 mt-4"
+                />
+
+                <canvas
+                  v-if="section.type === 'chart' && section._data"
+                  :id="'chart-inline-' + idx"
+                  width="400" height="200"
+                  class="mt-4"
+                ></canvas>
+              </div>
             </div>
           </v-container>
         </v-app>

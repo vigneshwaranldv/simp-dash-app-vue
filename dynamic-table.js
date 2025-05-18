@@ -10,52 +10,51 @@
 */
 
 export default {
-    name: 'DynamicTable',
-  
-    /* ---------- Props ---------- */
-    props: {
-      items:        { type: Array,  required: true },
-      /* customisable bits */
-      title:        { type: String, default: ''    },
-      dense:        { type: Boolean, default: true },
-      elevation:    { type: [Number, String], default: 5 },
-      height:       { type: [Number, String], default: 500 }
+  name: "DynamicTable",
+
+  /* ---------- Props ---------- */
+  props: {
+    items: { type: Array, required: true },
+    /* customisable bits */
+    title: { type: String, default: "" },
+    icon: { type: String, default: "mdi-table-large" },
+    dense: { type: Boolean, default: true },
+    elevation: { type: [Number, String], default: 5 },
+    height: { type: [Number, String], default: 500 },
+  },
+
+  /* ---------- Data ---------- */
+  data() {
+    return { search: "" };
+  },
+
+  /* ---------- Computed ---------- */
+  computed: {
+    /* Build headers from first item’s keys */
+    headers() {
+      if (!this.items?.length) return [];
+      return Object.keys(this.items[0]).map((k) => ({
+        title: k
+          .replace(/_/g, " ")
+          .replace(/([A-Z])/g, " $1")
+          .replace(/^./, (c) => c.toUpperCase())
+          .trim(),
+        value: k,
+      }));
     },
-  
-    /* ---------- Data ---------- */
-    data() {
-      return { search: '' };
+
+    /* Simple client-side filter */
+    filtered() {
+      if (!this.search) return this.items;
+      const term = this.search.toLowerCase();
+      return this.items.filter((row) =>
+        Object.values(row).some((v) => String(v).toLowerCase().includes(term))
+      );
     },
-  
-    /* ---------- Computed ---------- */
-    computed: {
-      /* Build headers from first item’s keys */
-      headers() {
-        if (!this.items?.length) return [];
-        return Object.keys(this.items[0]).map(k => ({
-          title: k
-            .replace(/_/g, ' ')
-            .replace(/([A-Z])/g, ' $1')
-            .replace(/^./, c => c.toUpperCase())
-            .trim(),
-          value: k
-        }));
-      },
-  
-      /* Simple client-side filter */
-      filtered() {
-        if (!this.search) return this.items;
-        const term = this.search.toLowerCase();
-        return this.items.filter(row =>
-          Object.values(row).some(
-            v => String(v).toLowerCase().includes(term)
-          )
-        );
-      }
-    },
-  
-    /* ---------- Template ---------- */
-    template: `
+  },
+
+  /* ---------- Template ---------- */
+  template: `
       <v-card
         :elevation="elevation"
         class="ma-4"
@@ -68,7 +67,8 @@ export default {
           density="compact"
           class="px-4"
         >
-          <v-toolbar-title v-if="title">
+          <v-toolbar-title v-if="title" class="d-flex align-center">
+            <v-icon size="18" class="mr-2">{{ icon }}</v-icon>
             {{ title }}
           </v-toolbar-title>
   
@@ -106,6 +106,5 @@ export default {
           </template>
         </v-data-table>
       </v-card>
-    `
-  };
-  
+    `,
+};

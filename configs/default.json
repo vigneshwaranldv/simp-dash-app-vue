@@ -1,15 +1,16 @@
 {
     "apis": [
         {
-            "label": "Users",
-            "url": "https://jsonplaceholder.typicode.com/users",
-            "type": "card"
-        },
-        {
             "label": "Posts",
             "url": "https://jsonplaceholder.typicode.com/posts",
             "type": "table"
         },
+        {
+            "label": "Users",
+            "url": "https://jsonplaceholder.typicode.com/users",
+            "type": "card"
+        },
+        
         {
             "label": "Todos",
             "url": "https://jsonplaceholder.typicode.com/todos",

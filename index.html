@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <title>Dynamic Table (ES-module)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <title>Dynamic Table (ES-module)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Vuetify CSS -->
-  <link href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css" rel="stylesheet">
+    <!-- Vuetify CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css" rel="stylesheet">
 
-  <!-- Import-map tells the browser where to find “vue” and “vuetify” -->
-  <script type="importmap">
+    <!-- Import-map tells the browser where to find “vue” and “vuetify” -->
+    <script type="importmap">
   {
     "imports": {
       "vue":     "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
@@ -19,74 +20,121 @@
   }
   </script>
 </head>
-<body style="margin:0">
-  <div id="app"></div>
 
-  <!-- main script (index.html) -->
-  <script type="module">
-    import { createApp, ref, onMounted } from 'vue';
-    import { createVuetify }             from 'vuetify';
-    import DynamicTable                  from './dynamic-table.js';
-    import DynamicCard                   from './dynamic-card.js';
-  
-    const App = {
-      components: { DynamicTable, DynamicCard },
-  
-      setup() {
-        const datasets = ref([]);   // [{ label, type, rows } …]
-  
-        onMounted(async () => {
-          try {
-            /* 1. Load config */
-            const cfg = await (await fetch('./configs/default.json')).json();
-            const apiDefs = cfg.apis ?? [];
-  
-            /* 2. Fetch in parallel */
-            await Promise.all(
-              apiDefs.map(async ({ label, url, type = 'table' }) => {
-                const rows = await (await fetch(url)).json();
-                datasets.value.push({ label, type, rows });
-              })
-            );
-          } catch (err) {
-            console.error('Error loading APIs:', err);
-          }
+<body style="margin:0">
+    <div id="app"></div>
+
+    <!-- main script (index.html) -->
+    <script type="module">
+        import { createApp, ref, onMounted } from 'vue';
+        import { createVuetify, useTheme } from 'vuetify';
+        import DynamicTable from './dynamic-table.js';
+        import DynamicCard from './dynamic-card.js';
+
+        /* ---------- Vuetify instance with light & dark ---------- */
+        const vuetify = createVuetify({
+            theme: {
+                defaultTheme: 'light',
+                themes: {
+                    light: { dark: false },
+                    dark: { dark: true }
+                }
+            }
         });
-  
-        return { datasets };
-      },
-  
-      template: `
+
+        /* ---------- Root component ---------- */
+        const App = {
+            components: { DynamicTable, DynamicCard },
+
+            setup() {
+                /* datasets that come from the config */
+                const datasets = ref([]);
+
+                /* ---- dark / light toggle ---- */
+                const vTheme = useTheme();
+                const isDark = ref(false);
+                const toggleTheme = () => {
+                    isDark.value = !isDark.value;
+                    vTheme.global.name.value = isDark.value ? 'dark' : 'light';
+                };
+
+                /* ---- load APIs once ---- */
+                onMounted(async () => {
+                    try {
+                        const cfg = await (await fetch('./configs/default.json')).json();
+                        const apiDefs = cfg.apis ?? [];
+
+                        /* fetch one-by-one → keeps order naturally */
+                        const ordered = [];
+                        for (const { label, url, type = 'table' } of apiDefs) {
+                            const rows = await (await fetch(url)).json();
+                            ordered.push({ label, type, rows });
+                        }
+
+                        datasets.value = ordered;          // sets once, in correct order
+                    } catch (e) {
+                        console.error('Error loading APIs:', e);
+                    }
+                });
+
+
+                return { datasets, isDark, toggleTheme };
+            },
+
+            /* ---------- Template ---------- */
+            template: `
         <v-app>
-          <v-container>
-            <template v-for="(d, i) in datasets" :key="i">
-              <h2 class="text-h5 my-4">{{ d.label }}</h2>
   
-              <!-- Card view: one card per item -->
-              <div v-if="d.type === 'card'">
-                <dynamic-card
-                  v-for="(item, idx) in d.rows"
-                  :key="idx"
-                  :data="item"
-                ></dynamic-card>
-              </div>
+          <!-- Top bar with theme switch -->
+          <v-app-bar density="compact" color="primary">
+            <v-toolbar-title>Demo Dashboard</v-toolbar-title>
+            <v-spacer></v-spacer>
   
-              <!-- Table view -->
-              <div v-else>
-                <dynamic-table :items="d.rows"></dynamic-table>
-              </div>
-            </template>
-          </v-container>
+            <v-switch
+              v-model="isDark"
+              @change="toggleTheme"
+              hide-details
+              inset
+              prepend-icon="mdi-theme-light-dark"
+              color="yellow"
+              :label="isDark ? 'Dark mode' : 'Light mode'"
+            ></v-switch>
+          </v-app-bar>
+  
+          <!-- Main content -->
+          <v-main>
+            <v-container class="pt-6">
+  
+              <template v-for="(d, i) in datasets" :key="i">
+                <h2 class="text-h5 my-4">{{ d.label }}</h2>
+  
+                <!-- CARD VIEW -->
+                <div v-if="d.type === 'card'">
+                  <dynamic-card
+                    v-for="(item, idx) in d.rows"
+                    :key="idx"
+                    :data="item"
+                  ></dynamic-card>
+                </div>
+  
+                <!-- TABLE VIEW -->
+                <div v-else>
+                  <dynamic-table
+                    :items="d.rows"
+                    :title="d.label"
+                  ></dynamic-table>
+                </div>
+              </template>
+  
+            </v-container>
+          </v-main>
         </v-app>
       `
-    };
-  
-    createApp(App).use(createVuetify()).mount('#app');
-  </script>
-  
-  
-  
-  
-  
+        };
+
+        createApp(App).use(vuetify).mount('#app');
+    </script>
+
 </body>
+
 </html>

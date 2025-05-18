@@ -58,6 +58,16 @@
                     vTheme.global.name.value = val ? 'dark' : 'light';
                 });
 
+                /* ---------- user input + buttons ---------- */
+                const userInput = ref('');
+                const handleSubmit = () => {
+                    // TODO: replace with real action (e.g. pass to API call)
+                    console.log('Submitted:', userInput.value.trim());
+                };
+                const handleClear = () => {
+                    userInput.value = '';
+                };
+
                 /* ---- load APIs once ---- */
                 onMounted(async () => {
                     try {
@@ -78,7 +88,7 @@
                 });
 
 
-                return { datasets, isDark };
+                return { datasets, isDark, userInput, handleSubmit, handleClear };
             },
 
             /* ---------- Template ---------- */
@@ -89,7 +99,7 @@
           <v-app-bar density="compact" color="primary">
             <v-toolbar-title>Demo Dashboard</v-toolbar-title>
             <v-spacer></v-spacer>
-  
+            
             <v-switch
               v-model="isDark"              
               hide-details
@@ -102,6 +112,35 @@
   
           <!-- Main content -->
           <v-main>
+            <v-row class="mb-4" align="center" justify="start">
+       <v-col cols="12" sm="4" md="3" lg="2">
+         <v-text-field
+           v-model="userInput"
+           placeholder="Enter something…"
+           density="compact"
+           hide-details
+           clearable
+         ></v-text-field>
+       </v-col>
+
+       <v-col cols="auto">
+         <v-btn
+           color="success"
+           density="comfortable"
+           @click="handleSubmit"
+           class="mr-sm-2 mb-2 mb-sm-0"
+         >Submit</v-btn>
+       </v-col>
+
+       <v-col cols="auto">
+         <v-btn
+           color="error"
+           density="comfortable"
+           @click="handleClear"
+           class="mb-2 mb-sm-0"
+         >Clear</v-btn>
+       </v-col>
+     </v-row>
             <v-container class="pt-6">
   
               <template v-for="(d, i) in datasets" :key="i">

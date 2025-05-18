@@ -1,247 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Config-Driven Dashboard</title>
+  <meta charset="UTF-8">
+  <title>Dynamic Table (ES-module)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Vue 3 + Vuetify CDN -->
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Vuetify CSS -->
   <link href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body { font-family: Roboto, sans-serif; margin: 0; padding: 0; }
-    .dashboard-section { margin-bottom: 2rem; }
-  </style>
+  <!-- Import-map tells the browser where to find “vue” and “vuetify” -->
+  <script type="importmap">
+  {
+    "imports": {
+      "vue":     "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
+      "vuetify": "https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.esm.js"
+    }
+  }
+  </script>
 </head>
-<body>
+<body style="margin:0">
   <div id="app"></div>
 
+  <!-- Main script (ES-module) -->
   <script type="module">
-    const { createApp, ref, onMounted, computed, nextTick } = Vue;
-    const { createVuetify } = Vuetify;
-    const vuetify = createVuetify();
+    import { createApp, ref } from 'vue';
+    import { createVuetify }  from 'vuetify';
+    import DynamicTable       from './dynamic-table.js';   // ⬅️ external component
 
-    const app = createApp({
+    const App = {
+      components: { DynamicTable },
       setup() {
-        const sections = ref([]);
-        const userInput = ref("");
-        const loading = ref(false);
-        const error = ref(null);
-        const activeTab = ref(0);
-
-        const inlineSections = computed(() => sections.value.filter(s => !s.useTab));
-        const tabbedSections = computed(() => sections.value.filter(s => s.useTab));
-
-        async function loadConfig() {
-          const urlParams = new URLSearchParams(window.location.search);
-          const configName = urlParams.get("page") || "default";
-          const configPath = `./configs/${configName}.json`;
-
-          try {
-            const res = await fetch(configPath);
-            const config = await res.json();
-            sections.value = config.sections || [];
-
-            for (const section of sections.value) {
-              if (!section.allowInput) {
-                await fetchData(section);
-              }
-            }
-          } catch (err) {
-            error.value = `Failed to load config: ${err.message}`;
-          }
-        }
-
-        async function fetchData(section, input) {
-          loading.value = true;
-          const payload = section.payload || {};
-          if (input) payload.input = input;
-
-          try {
-            let response;
-            if (section.apiType === "POST") {
-              response = await fetch(section.api, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-              });
-            } else {
-              response = await fetch(section.api);
-            }
-            section._data = await response.json();
-            await nextTick();
-            renderChart(section);
-          } catch (err) {
-            section._data = [];
-            console.error('API fetch failed:', err);
-          } finally {
-            loading.value = false;
-          }
-        }
-
-        function renderChart(section) {
-          if (section.type === 'chart' && section._data) {
-            const prefix = section.useTab ? 'tab' : 'inline';
-            const idx = sections.value.indexOf(section);
-            const chartId = `chart-${prefix}-${idx}`;
-            const ctx = document.getElementById(chartId);
-            if (ctx && !ctx.dataset.rendered) {
-              new Chart(ctx, {
-                type: section.chartType || 'bar',
-                data: {
-                  labels: section._data.map(item => item.label || item.title || item.id),
-                  datasets: [{
-                    label: section.chartLabel || 'Dataset',
-                    data: section._data.map(item => item.value || item.id),
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)'
-                  }]
-                },
-                options: {
-                  responsive: true,
-                  maintainAspectRatio: false
-                }
-              });
-              ctx.dataset.rendered = true;
-            }
-          }
-        }
-
-        onMounted(loadConfig);
-
-        return {
-          sections,
-          inlineSections,
-          tabbedSections,
-          fetchData,
-          userInput,
-          loading,
-          error,
-          activeTab,
-          renderChart
-        };
+        const rows = ref([
+          { name: 'Alice', age: 30, city: 'New York' },
+          { name: 'Bob',   age: 28, city: 'Chicago'  },
+          { name: 'Cara',  age: 32, city: 'Boston'   }
+        ]);
+        return { rows };
       },
       template: `
         <v-app>
-          <v-container>
-            <v-alert type="error" v-if="error">{{ error }}</v-alert>
-            <v-progress-linear v-if="loading" indeterminate color="primary"></v-progress-linear>
-
-            <div v-if="tabbedSections.length">
-              <v-tabs v-model="activeTab" class="my-4">
-                <v-tab>Default</v-tab>
-                <v-tab v-for="(section, idx) in tabbedSections" :key="'tab-' + idx">
-                  {{ section.title }}
-                </v-tab>
-              </v-tabs>
-
-              <v-window v-model="activeTab">
-                <v-window-item :value="0">
-                  <div v-for="(section, idx) in inlineSections" :key="'inline-' + idx" class="dashboard-section">
-                    <h3>{{ section.title }}</h3>
-
-                    <div v-if="section.allowInput">
-                      <v-text-field v-model="userInput" :label="section.inputLabel || 'Enter Value'"></v-text-field>
-                      <v-btn @click="section._data = null" color="secondary">Clear</v-btn>
-                      <v-btn @click="fetchData(section, userInput)" color="primary">Submit</v-btn>
-                    </div>
-
-                    <v-card v-if="section.type === 'card' && section._data" class="pa-4 my-4">
-                      <div v-for="(value, key) in section._data" :key="key">
-                        <strong>{{ key }}:</strong> {{ value }}
-                      </div>
-                    </v-card>
-
-                    <v-data-table
-                      v-if="section.type === 'table' && section._data"
-                      :headers="section.headers || Object.keys(section._data[0] || {}).map(k => ({ title: k, key: k }))"
-                      :items="section._data"
-                      class="elevation-1 mt-4"
-                    />
-
-                    <canvas
-                      v-if="section.type === 'chart' && section._data"
-                      :id="'chart-inline-' + idx"
-                      width="400" height="200"
-                      class="mt-4"
-                    ></canvas>
-                  </div>
-                </v-window-item>
-
-                <v-window-item v-for="(section, idx) in tabbedSections" :key="'tab-view-' + idx" :value="idx + 1">
-                  <div class="dashboard-section">
-                    <h3>{{ section.title }}</h3>
-
-                    <div v-if="section.allowInput">
-                      <v-text-field v-model="userInput" :label="section.inputLabel || 'Enter Value'"></v-text-field>
-                      <v-btn @click="section._data = null" color="secondary">Clear</v-btn>
-                      <v-btn @click="fetchData(section, userInput)" color="primary">Submit</v-btn>
-                    </div>
-
-                    <v-card v-if="section.type === 'card' && section._data" class="pa-4 my-4">
-                      <div v-for="(value, key) in section._data" :key="key">
-                        <strong>{{ key }}:</strong> {{ value }}
-                      </div>
-                    </v-card>
-
-                    <v-data-table
-                      v-if="section.type === 'table' && section._data"
-                      :headers="section.headers || Object.keys(section._data[0] || {}).map(k => ({ title: k, key: k }))"
-                      :items="section._data"
-                      class="elevation-1 mt-4"
-                    />
-
-                    <canvas
-                      v-if="section.type === 'chart' && section._data"
-                      :id="'chart-tab-' + idx"
-                      width="400" height="200"
-                      class="mt-4"
-                    ></canvas>
-                  </div>
-                </v-window-item>
-              </v-window>
-            </div>
-
-            <div v-else>
-              <div v-for="(section, idx) in inlineSections" :key="'inline-' + idx" class="dashboard-section">
-                <h3>{{ section.title }}</h3>
-
-                <div v-if="section.allowInput">
-                  <v-text-field v-model="userInput" :label="section.inputLabel || 'Enter Value'"></v-text-field>
-                  <v-btn @click="section._data = null" color="secondary">Clear</v-btn>
-                  <v-btn @click="fetchData(section, userInput)" color="primary">Submit</v-btn>
-                </div>
-
-                <v-card v-if="section.type === 'card' && section._data" class="pa-4 my-4">
-                  <div v-for="(value, key) in section._data" :key="key">
-                    <strong>{{ key }}:</strong> {{ value }}
-                  </div>
-                </v-card>
-
-                <v-data-table
-                  v-if="section.type === 'table' && section._data"
-                  :headers="section.headers || Object.keys(section._data[0] || {}).map(k => ({ title: k, key: k }))"
-                  :items="section._data"
-                  class="elevation-1 mt-4"
-                />
-
-                <canvas
-                  v-if="section.type === 'chart' && section._data"
-                  :id="'chart-inline-' + idx"
-                  width="400" height="200"
-                  class="mt-4"
-                ></canvas>
-              </div>
-            </div>
-          </v-container>
+          <dynamic-table :items="rows" />
         </v-app>
       `
-    });
+    };
 
-    app.use(vuetify).mount('#app');
+    createApp(App)
+      .use(createVuetify())
+      .mount('#app');
   </script>
 </body>
 </html>

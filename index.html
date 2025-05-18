@@ -22,32 +22,66 @@
 <body style="margin:0">
   <div id="app"></div>
 
-  <!-- Main script (ES-module) -->
-  <script type="module">
-    import { createApp, ref } from 'vue';
-    import { createVuetify }  from 'vuetify';
-    import DynamicTable       from './dynamic-table.js';   // ⬅️ external component
-
+  <!-- main script (index.html) -->
+  <!-- main script -->
+<script type="module">
+    import { createApp, ref, onMounted } from 'vue';
+    import { createVuetify }             from 'vuetify';
+    import DynamicTable                  from './dynamic-table.js';
+  
     const App = {
       components: { DynamicTable },
+  
       setup() {
-        const rows = ref([
-          { name: 'Alice', age: 30, city: 'New York' },
-          { name: 'Bob',   age: 28, city: 'Chicago'  },
-          { name: 'Cara',  age: 32, city: 'Boston'   }
-        ]);
-        return { rows };
+        /* each entry becomes { label, rows } */
+        const tables = ref([]);
+  
+        onMounted(async () => {
+          try {
+            /* 1. Load config ------------------------------ */
+            const cfgResp = await fetch('./configs/default.json');
+            if (!cfgResp.ok) throw new Error(`Config fetch ${cfgResp.status}`);
+            const cfg = await cfgResp.json();
+  
+            /* 2. Loop over every API in the config -------- */
+            const apiDefs = cfg?.apis ?? [];
+            const fetchPromises = apiDefs.map(async ({ label, url }) => {
+              const resp = await fetch(url);
+              if (!resp.ok) throw new Error(`API ${url} → ${resp.status}`);
+              const data = await resp.json();
+              /* push the result into tables array */
+              tables.value.push({ label, rows: data });
+            });
+  
+            /* run them all in parallel */
+            await Promise.all(fetchPromises);
+          } catch (err) {
+            console.error(err);
+          }
+        });
+  
+        return { tables };
       },
+  
+      /* one table per API, with a simple heading */
       template: `
         <v-app>
-          <dynamic-table :items="rows" />
+          <v-container>
+            <template v-for="(t, idx) in tables" :key="idx">
+              <h2 class="text-h5 mb-2">{{ t.label }}</h2>
+              <dynamic-table :items="t.rows" />
+            </template>
+          </v-container>
         </v-app>
       `
     };
-
+  
     createApp(App)
       .use(createVuetify())
       .mount('#app');
   </script>
+  
+  
+  
 </body>
 </html>

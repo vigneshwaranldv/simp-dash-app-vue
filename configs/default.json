@@ -1,25 +1,19 @@
 {
-    "sections": [
-      {
-        "title": "Live Summary",
-        "type": "card",
-        "api": "https://jsonplaceholder.typicode.com/users/1",
-        "apiType": "GET"
-      },
-      {
-        "title": "Post List",
-        "type": "table",
-        "api": "https://jsonplaceholder.typicode.com/posts",
-        "apiType": "GET"
-      },
-      {
-        "title": "Posts Chart",
-        "type": "chart",
-        "api": "https://jsonplaceholder.typicode.com/posts",
-        "apiType": "GET",
-        "useTab": true,
-        "chartLabel": "Post Titles vs IDs"
-      }
+    "apis": [
+        {
+            "label": "Users",
+            "url": "https://jsonplaceholder.typicode.com/users",
+            "type": "card"
+        },
+        {
+            "label": "Posts",
+            "url": "https://jsonplaceholder.typicode.com/posts",
+            "type": "table"
+        },
+        {
+            "label": "Todos",
+            "url": "https://jsonplaceholder.typicode.com/todos",
+            "type": "table"
+        }
     ]
-  }
-  
+}

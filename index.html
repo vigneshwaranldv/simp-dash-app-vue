@@ -26,7 +26,7 @@
 
     <!-- main script (index.html) -->
     <script type="module">
-        import { createApp, ref, onMounted } from 'vue';
+        import { createApp, ref, onMounted, watch } from 'vue';
         import { createVuetify, useTheme } from 'vuetify';
         import DynamicTable from './dynamic-table.js';
         import DynamicCard from './dynamic-card.js';
@@ -34,7 +34,7 @@
         /* ---------- Vuetify instance with light & dark ---------- */
         const vuetify = createVuetify({
             theme: {
-                defaultTheme: 'light',
+                defaultTheme: 'dark',
                 themes: {
                     light: { dark: false },
                     dark: { dark: true }
@@ -52,11 +52,11 @@
 
                 /* ---- dark / light toggle ---- */
                 const vTheme = useTheme();
-                const isDark = ref(false);
-                const toggleTheme = () => {
-                    isDark.value = !isDark.value;
-                    vTheme.global.name.value = isDark.value ? 'dark' : 'light';
-                };
+                const isDark = ref(true);
+
+                watch(isDark, val => {
+                    vTheme.global.name.value = val ? 'dark' : 'light';
+                });
 
                 /* ---- load APIs once ---- */
                 onMounted(async () => {
@@ -78,7 +78,7 @@
                 });
 
 
-                return { datasets, isDark, toggleTheme };
+                return { datasets, isDark };
             },
 
             /* ---------- Template ---------- */
@@ -91,8 +91,7 @@
             <v-spacer></v-spacer>
   
             <v-switch
-              v-model="isDark"
-              @change="toggleTheme"
+              v-model="isDark"              
               hide-details
               inset
               prepend-icon="mdi-theme-light-dark"

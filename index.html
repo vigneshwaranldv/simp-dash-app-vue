@@ -23,63 +23,68 @@
   <div id="app"></div>
 
   <!-- main script (index.html) -->
-  <!-- main script -->
-<script type="module">
+  <script type="module">
     import { createApp, ref, onMounted } from 'vue';
     import { createVuetify }             from 'vuetify';
     import DynamicTable                  from './dynamic-table.js';
+    import DynamicCard                   from './dynamic-card.js';
   
     const App = {
-      components: { DynamicTable },
+      components: { DynamicTable, DynamicCard },
   
       setup() {
-        /* each entry becomes { label, rows } */
-        const tables = ref([]);
+        const datasets = ref([]);   // [{ label, type, rows } …]
   
         onMounted(async () => {
           try {
-            /* 1. Load config ------------------------------ */
-            const cfgResp = await fetch('./configs/default.json');
-            if (!cfgResp.ok) throw new Error(`Config fetch ${cfgResp.status}`);
-            const cfg = await cfgResp.json();
+            /* 1. Load config */
+            const cfg = await (await fetch('./configs/default.json')).json();
+            const apiDefs = cfg.apis ?? [];
   
-            /* 2. Loop over every API in the config -------- */
-            const apiDefs = cfg?.apis ?? [];
-            const fetchPromises = apiDefs.map(async ({ label, url }) => {
-              const resp = await fetch(url);
-              if (!resp.ok) throw new Error(`API ${url} → ${resp.status}`);
-              const data = await resp.json();
-              /* push the result into tables array */
-              tables.value.push({ label, rows: data });
-            });
-  
-            /* run them all in parallel */
-            await Promise.all(fetchPromises);
+            /* 2. Fetch in parallel */
+            await Promise.all(
+              apiDefs.map(async ({ label, url, type = 'table' }) => {
+                const rows = await (await fetch(url)).json();
+                datasets.value.push({ label, type, rows });
+              })
+            );
           } catch (err) {
-            console.error(err);
+            console.error('Error loading APIs:', err);
           }
         });
   
-        return { tables };
+        return { datasets };
       },
   
-      /* one table per API, with a simple heading */
       template: `
         <v-app>
           <v-container>
-            <template v-for="(t, idx) in tables" :key="idx">
-              <h2 class="text-h5 mb-2">{{ t.label }}</h2>
-              <dynamic-table :items="t.rows" />
+            <template v-for="(d, i) in datasets" :key="i">
+              <h2 class="text-h5 my-4">{{ d.label }}</h2>
+  
+              <!-- Card view: one card per item -->
+              <div v-if="d.type === 'card'">
+                <dynamic-card
+                  v-for="(item, idx) in d.rows"
+                  :key="idx"
+                  :data="item"
+                ></dynamic-card>
+              </div>
+  
+              <!-- Table view -->
+              <div v-else>
+                <dynamic-table :items="d.rows"></dynamic-table>
+              </div>
             </template>
           </v-container>
         </v-app>
       `
     };
   
-    createApp(App)
-      .use(createVuetify())
-      .mount('#app');
+    createApp(App).use(createVuetify()).mount('#app');
   </script>
+  
+  
   
   
   

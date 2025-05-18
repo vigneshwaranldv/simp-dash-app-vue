@@ -1,19 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+
+<head>
     <meta charset="UTF-8" />
-    <title>Dynamic Table (ES-module)</title>
+    <title>Simple Data Viewer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Vuetify CSS -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css"
-      rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css"
-      rel="stylesheet"
-    />
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css" rel="stylesheet" />
 
     <!-- Import-map tells the browser where to find “vue” and “vuetify” -->
     <script type="importmap">
@@ -24,133 +19,145 @@
         }
       }
     </script>
-  </head>
+</head>
 
-  <body style="margin: 0">
+<body style="margin: 0">
     <div id="app"></div>
 
     <!-- main script (index.html) -->
     <script type="module">
-      import { createApp, ref, onMounted, watch } from "vue";
-      import { createVuetify, useTheme } from "vuetify";
-      import DynamicTable from "./dynamic-table.js";
-      import DynamicCard from "./dynamic-card.js";
+        import { createApp, ref, onMounted, watch } from "vue";
+        import { createVuetify, useTheme } from "vuetify";
+        import DynamicTable from "./dynamic-table.js";
+        import DynamicCard from "./dynamic-card.js";
 
-      /* ---------- Vuetify instance with light & dark ---------- */
-      const vuetify = createVuetify({
-        theme: {
-          defaultTheme: "dark",
-          themes: {
-            light: { dark: false },
-            dark: { dark: true },
-          },
-        },
-      });
+        /* ---------- Vuetify instance with light & dark ---------- */
+        const vuetify = createVuetify({
+            theme: {
+                defaultTheme: "dark",
+                themes: {
+                    light: { dark: false },
+                    dark: { dark: true },
+                },
+            },
+        });
 
-      /* ---------- Root component ---------- */
-      const App = {
-        components: { DynamicTable, DynamicCard },
+        /* ---------- Root component ---------- */
+        const App = {
+            components: { DynamicTable, DynamicCard },
 
-        setup() {
-          /* datasets that come from the config */
-          const datasets = ref([]);
-          const loading = ref(false);
+            setup() {
+                /* datasets that come from the config */
+                const datasets = ref([]);
+                const loading = ref(false);
 
-          /* ---- dark / light toggle ---- */
-          const vTheme = useTheme();
-          const isDark = ref(true);
+                const snackbar = ref(false);
+                const snackbarText = ref("");
+                const showError = (msg) => {
+                    snackbarText.value = msg;
+                    snackbar.value = true;
+                };
 
-          watch(isDark, (val) => {
-            vTheme.global.name.value = val ? "dark" : "light";
-          });
+                /* ---- dark / light toggle ---- */
+                const vTheme = useTheme();
+                const isDark = ref(true);
 
-          /* ---------- user input + buttons ---------- */
-          const userInput = ref("");
-          // const handleSubmit = () => {
-          //     // TODO: replace with real action (e.g. pass to API call)
-          //     console.log('Submitted:', userInput.value.trim());
-          // };
+                watch(isDark, (val) => {
+                    vTheme.global.name.value = val ? "dark" : "light";
+                });
 
-          const handleSubmit = async () => {
-            if (loading.value) return;
-            loading.value = true;
-            datasets.value = [];
+                /* ---------- user input + buttons ---------- */
+                const userInput = ref("");
+                // const handleSubmit = () => {
+                //     // TODO: replace with real action (e.g. pass to API call)
+                //     console.log('Submitted:', userInput.value.trim());
+                // };
 
-            try {
-              const cfg = await (await fetch("./configs/default.json")).json();
-              const ordered = [];
+                const handleSubmit = async () => {
+                    if (loading.value) return;
 
-              /* sequential fetch to keep order */
-              for (const { label, url, type = "table", apiType = 'GET', payload = {} } of cfg.apis ?? []) {
-                /* Optional: incorporate userInput here if your APIs need it
-                               e.g. const fullUrl = url + '?q=' + encodeURIComponent(userInput.value.trim());
-                            */
-                // const rows = await (await fetch(url)).json();
-                // ordered.push({ label, type, rows });
+                    if (!userInput.value.trim()) {
+                        showError("Please enter a value before submit!");
+                        return;
+                    }
 
-                let resp;
-                if(apiType.toUpperCase() === 'POST'){
-                    resp = await fetch(url,{
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify(payload)
-                    });
-                } else{
-                    resp = await fetch(url);
-                }
+                    loading.value = true;
+                    datasets.value = [];
 
-                if(!resp.ok) throw new Error(`${label} -> HTTP ${resp.status}`);
+                    try {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const configName = urlParams.get("page") || "default";
+                        const configPath = `./configs/${configName}.json`;
+                        const cfg = await (await fetch(configPath)).json();
+                        const ordered = [];
 
-                const rows = await resp.json();
-                ordered.push({label, type, rows});
-              }
-              datasets.value = ordered;
-            } catch (err) {
-              console.error("Error fetching data:", err);
-            } finally {
-              loading.value = false;
-            }
-          };
+                        /* sequential fetch to keep order */
+                        for (const {
+                            label,
+                            url,
+                            type = "table",
+                            apiType = "GET",
+                            payload = {},
+                        } of cfg.apis ?? []) {
+                            /* Optional: incorporate userInput here if your APIs need it
+                                                                   e.g. const fullUrl = url + '?q=' + encodeURIComponent(userInput.value.trim());
+                                                                */
+                            // const rows = await (await fetch(url)).json();
+                            // ordered.push({ label, type, rows });
 
-          const handleClear = () => {
-            userInput.value = "";
-            datasets.value = [];
-          };
+                            let resp;
+                            if (apiType.toUpperCase() === "POST") {
+                                resp = await fetch(url, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify(payload),
+                                });
+                            } else {
+                                resp = await fetch(url);
+                            }
 
-          /* ---- load APIs once ---- */
-          onMounted(async () => {
-            // try {
-            //     const cfg = await (await fetch('./configs/default.json')).json();
-            //     const apiDefs = cfg.apis ?? [];
-            //     /* fetch one-by-one → keeps order naturally */
-            //     const ordered = [];
-            //     for (const { label, url, type = 'table' } of apiDefs) {
-            //         const rows = await (await fetch(url)).json();
-            //         ordered.push({ label, type, rows });
-            //     }
-            //     datasets.value = ordered;          // sets once, in correct order
-            // } catch (e) {
-            //     console.error('Error loading APIs:', e);
-            // }
-          });
+                            if (!resp.ok)
+                                throw new Error(`${label} -> HTTP ${resp.status}`);
 
-          return {
-            datasets,
-            isDark,
-            loading,
-            userInput,
-            handleSubmit,
-            handleClear,
-          };
-        },
+                            const rows = await resp.json();
+                            ordered.push({ label, type, rows });
+                        }
+                        datasets.value = ordered;
+                    } catch (err) {
+                        console.error("Error fetching data:", err);
+                    } finally {
+                        loading.value = false;
+                    }
+                };
 
-        /* ---------- Template ---------- */
-        template: `
+                const handleClear = () => {
+                    userInput.value = "";
+                    datasets.value = [];
+                };
+
+                onMounted(async () => {
+                    // nothing happens here for now
+                });
+
+                return {
+                    datasets,
+                    isDark,
+                    loading,
+                    userInput,
+                    handleSubmit,
+                    handleClear,
+                    snackbar,
+                    snackbarText,
+                };
+            },
+
+            /* ---------- Template ---------- */
+            template: /* html */ `
         <v-app>
   
           <!-- Top bar with theme switch -->
-          <v-app-bar density="compact" color="primary">
-            <v-toolbar-title>Demo Dashboard</v-toolbar-title>
+          <v-app-bar density="compact" color="blue-grey-darken-3">
+            <v-toolbar-title>Data Results Viewer</v-toolbar-title>
             <v-spacer></v-spacer>
             
             <v-switch
@@ -205,7 +212,15 @@
 ></v-progress-linear>
 
             <v-container class="pt-6">
-  
+                <v-snackbar 
+                    v-model="snackbar"
+                    color="error"
+                    timeout="3000"
+                    location="center"
+                    elevation="50"
+                >
+                {{ snackbarText }}
+                    </v-snackbar>
               <template v-for="(d, i) in datasets" :key="i">
                 <h2 class="text-h5 my-4">{{ d.label }}</h2>
   
@@ -231,9 +246,10 @@
           </v-main>
         </v-app>
       `,
-      };
+        };
 
-      createApp(App).use(vuetify).mount("#app");
+        createApp(App).use(vuetify).mount("#app");
     </script>
-  </body>
+</body>
+
 </html>

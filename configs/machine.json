@@ -1,0 +1,10 @@
+{
+    "apis": [
+        {
+            "label": "Posts",
+            "url": "https://jsonplaceholder.typicode.com/posts",
+            "type": "table",
+            "apiType": "GET"
+        }
+    ]
+}

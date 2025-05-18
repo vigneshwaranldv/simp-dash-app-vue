@@ -54,7 +54,7 @@ export default {
   },
 
   /* ---------- Template ---------- */
-  template: `
+  template: /*html*/ `
       <v-card
         :elevation="elevation"
         class="ma-4"

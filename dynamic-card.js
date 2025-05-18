@@ -1,27 +1,27 @@
 // dynamic-card.js — styled version (Vue 3 + Vuetify 3, ESM)
 export default {
-    name: 'DynamicCard',
-  
-    /* ---------- props ---------- */
-    props: {
-      data:       { type: Object, required: true },
-      titleField: { type: String, default: null },
-      icon:       { type: String, default: 'mdi-card-text-outline' },
-      color:      { type: String, default: 'secondary' },   // toolbar color
-      elevation:  { type: [Number, String], default: 5 }
+  name: "DynamicCard",
+
+  /* ---------- props ---------- */
+  props: {
+    data: { type: Object, required: true },
+    titleField: { type: String, default: null },
+    icon: { type: String, default: "mdi-card-text-outline" },
+    color: { type: String, default: "secondary" }, // toolbar color
+    elevation: { type: [Number, String], default: 5 },
+  },
+
+  /* ---------- computed ---------- */
+  computed: {
+    cardTitle() {
+      return this.titleField && this.data[this.titleField]
+        ? this.data[this.titleField]
+        : "Details";
     },
-  
-    /* ---------- computed ---------- */
-    computed: {
-      cardTitle() {
-        return this.titleField && this.data[this.titleField]
-          ? this.data[this.titleField]
-          : 'Details';
-      }
-    },
-  
-    /* ---------- template ---------- */
-    template: `
+  },
+
+  /* ---------- template ---------- */
+  template: /*html*/ `
       <v-card
         class="ma-4 rounded-lg"
         :elevation="elevation"
@@ -56,6 +56,5 @@ export default {
           </v-row>
         </v-card-text>
       </v-card>
-    `
-  };
-  
+    `,
+};

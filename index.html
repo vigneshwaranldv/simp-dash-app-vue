@@ -1,128 +1,151 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Dynamic Table (ES-module)</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Vuetify CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css" rel="stylesheet">
+    <link
+      href="https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/@mdi/font@7.3.67/css/materialdesignicons.min.css"
+      rel="stylesheet"
+    />
 
     <!-- Import-map tells the browser where to find “vue” and “vuetify” -->
     <script type="importmap">
-  {
-    "imports": {
-      "vue":     "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
-      "vuetify": "https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.esm.js"
-    }
-  }
-  </script>
-</head>
+      {
+        "imports": {
+          "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js",
+          "vuetify": "https://cdn.jsdelivr.net/npm/vuetify@3.5.0/dist/vuetify.esm.js"
+        }
+      }
+    </script>
+  </head>
 
-<body style="margin:0">
+  <body style="margin: 0">
     <div id="app"></div>
 
     <!-- main script (index.html) -->
     <script type="module">
-        import { createApp, ref, onMounted, watch } from 'vue';
-        import { createVuetify, useTheme } from 'vuetify';
-        import DynamicTable from './dynamic-table.js';
-        import DynamicCard from './dynamic-card.js';
+      import { createApp, ref, onMounted, watch } from "vue";
+      import { createVuetify, useTheme } from "vuetify";
+      import DynamicTable from "./dynamic-table.js";
+      import DynamicCard from "./dynamic-card.js";
 
-        /* ---------- Vuetify instance with light & dark ---------- */
-        const vuetify = createVuetify({
-            theme: {
-                defaultTheme: 'dark',
-                themes: {
-                    light: { dark: false },
-                    dark: { dark: true }
-                }
-            }
-        });
+      /* ---------- Vuetify instance with light & dark ---------- */
+      const vuetify = createVuetify({
+        theme: {
+          defaultTheme: "dark",
+          themes: {
+            light: { dark: false },
+            dark: { dark: true },
+          },
+        },
+      });
 
-        /* ---------- Root component ---------- */
-        const App = {
-            components: { DynamicTable, DynamicCard },
+      /* ---------- Root component ---------- */
+      const App = {
+        components: { DynamicTable, DynamicCard },
 
-            setup() {
-                /* datasets that come from the config */
-                const datasets = ref([]);
-                const loading = ref(false);
+        setup() {
+          /* datasets that come from the config */
+          const datasets = ref([]);
+          const loading = ref(false);
 
-                /* ---- dark / light toggle ---- */
-                const vTheme = useTheme();
-                const isDark = ref(true);
+          /* ---- dark / light toggle ---- */
+          const vTheme = useTheme();
+          const isDark = ref(true);
 
-                watch(isDark, val => {
-                    vTheme.global.name.value = val ? 'dark' : 'light';
-                });
+          watch(isDark, (val) => {
+            vTheme.global.name.value = val ? "dark" : "light";
+          });
 
-                /* ---------- user input + buttons ---------- */
-                const userInput = ref('');
-                // const handleSubmit = () => {
-                //     // TODO: replace with real action (e.g. pass to API call)
-                //     console.log('Submitted:', userInput.value.trim());
-                // };
+          /* ---------- user input + buttons ---------- */
+          const userInput = ref("");
+          // const handleSubmit = () => {
+          //     // TODO: replace with real action (e.g. pass to API call)
+          //     console.log('Submitted:', userInput.value.trim());
+          // };
 
-                const handleSubmit = async () => {
-                    if (loading.value) return;
-                    loading.value = true;
-                    datasets.value = [];
+          const handleSubmit = async () => {
+            if (loading.value) return;
+            loading.value = true;
+            datasets.value = [];
 
-                    try {
-                        const cfg = await (await fetch('./configs/default.json')).json();
-                        const ordered = [];
+            try {
+              const cfg = await (await fetch("./configs/default.json")).json();
+              const ordered = [];
 
-                        /* sequential fetch to keep order */
-                        for (const { label, url, type = 'table' } of cfg.apis ?? []) {
-                            /* Optional: incorporate userInput here if your APIs need it
+              /* sequential fetch to keep order */
+              for (const { label, url, type = "table", apiType = 'GET', payload = {} } of cfg.apis ?? []) {
+                /* Optional: incorporate userInput here if your APIs need it
                                e.g. const fullUrl = url + '?q=' + encodeURIComponent(userInput.value.trim());
                             */
-                            const rows = await (await fetch(url)).json();
-                            ordered.push({ label, type, rows });
-                        }
-                        datasets.value = ordered;
+                // const rows = await (await fetch(url)).json();
+                // ordered.push({ label, type, rows });
 
-                    } catch (err) {
-                        console.error('Error fetching data:', err);
-                    } finally {
-                        loading.value = false;
-                    }
+                let resp;
+                if(apiType.toUpperCase() === 'POST'){
+                    resp = await fetch(url,{
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                } else{
+                    resp = await fetch(url);
+                }
 
-                };
+                if(!resp.ok) throw new Error(`${label} -> HTTP ${resp.status}`);
 
-                const handleClear = () => {
-                    userInput.value = '';
-                    datasets.value = [];
-                };
+                const rows = await resp.json();
+                ordered.push({label, type, rows});
+              }
+              datasets.value = ordered;
+            } catch (err) {
+              console.error("Error fetching data:", err);
+            } finally {
+              loading.value = false;
+            }
+          };
 
-                /* ---- load APIs once ---- */
-                onMounted(async () => {
-                    // try {
-                    //     const cfg = await (await fetch('./configs/default.json')).json();
-                    //     const apiDefs = cfg.apis ?? [];
+          const handleClear = () => {
+            userInput.value = "";
+            datasets.value = [];
+          };
 
-                    //     /* fetch one-by-one → keeps order naturally */
-                    //     const ordered = [];
-                    //     for (const { label, url, type = 'table' } of apiDefs) {
-                    //         const rows = await (await fetch(url)).json();
-                    //         ordered.push({ label, type, rows });
-                    //     }
+          /* ---- load APIs once ---- */
+          onMounted(async () => {
+            // try {
+            //     const cfg = await (await fetch('./configs/default.json')).json();
+            //     const apiDefs = cfg.apis ?? [];
+            //     /* fetch one-by-one → keeps order naturally */
+            //     const ordered = [];
+            //     for (const { label, url, type = 'table' } of apiDefs) {
+            //         const rows = await (await fetch(url)).json();
+            //         ordered.push({ label, type, rows });
+            //     }
+            //     datasets.value = ordered;          // sets once, in correct order
+            // } catch (e) {
+            //     console.error('Error loading APIs:', e);
+            // }
+          });
 
-                    //     datasets.value = ordered;          // sets once, in correct order
-                    // } catch (e) {
-                    //     console.error('Error loading APIs:', e);
-                    // }
-                });
+          return {
+            datasets,
+            isDark,
+            loading,
+            userInput,
+            handleSubmit,
+            handleClear,
+          };
+        },
 
-
-                return { datasets, isDark, loading, userInput, handleSubmit, handleClear };
-            },
-
-            /* ---------- Template ---------- */
-            template: `
+        /* ---------- Template ---------- */
+        template: `
         <v-app>
   
           <!-- Top bar with theme switch -->
@@ -207,12 +230,10 @@
             </v-container>
           </v-main>
         </v-app>
-      `
-        };
+      `,
+      };
 
-        createApp(App).use(vuetify).mount('#app');
+      createApp(App).use(vuetify).mount("#app");
     </script>
-
-</body>
-
+  </body>
 </html>

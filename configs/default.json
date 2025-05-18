@@ -3,18 +3,31 @@
         {
             "label": "Posts",
             "url": "https://jsonplaceholder.typicode.com/posts",
-            "type": "table"
+            "type": "table",
+            "apiType": "GET"
         },
         {
             "label": "Users",
             "url": "https://jsonplaceholder.typicode.com/users",
-            "type": "card"
+            "type": "card",
+            "apiType": "GET"
         },
         
         {
             "label": "Todos",
             "url": "https://jsonplaceholder.typicode.com/todos",
-            "type": "table"
+            "type": "table",
+            "apiType": "GET"
+        },
+        {
+            "label": "Echo (POST sample)",
+            "url": "https://httpbin.org/post",
+            "type": "card",
+            "apiType": "POST",
+            "payload": {
+                "greeting": "hello world",
+                "timestamp": "2025-05-18T05:00:00Z"
+            }
         }
     ]
 }
